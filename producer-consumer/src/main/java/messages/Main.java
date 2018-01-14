@@ -14,8 +14,8 @@ import concurrency.ThreadColour;
 
 // Thread interference can be solved using synchonized block.
 // It has its drawbacks:
-// - threads that are blocked waiting to executre sync block are blocked, they cannot be interrupted
-// - synchronized block must be in within the same method
+// - threads that are blocked waiting to execute sync block are blocked, they cannot be interrupted
+// - synchronized block must be within the same method, can start synchronizing in one method and end in another
 // - can't test if the objects intrinsic lock is available
 // - if the lock is not available, we cannot timeout after we have waited for the lock for awhile
 // - if multiple threads are waiting to get a lock, it is not first come first serve basis
@@ -115,7 +115,9 @@ class MyConsumer implements Runnable {
     public void run() {
         int counter = 0;
         while (true) {
-            // bufferLock.lock();
+            // bufferLock.lock(); // Acquires the lock.
+            // tryLock: Acquires the lock only if it is not held by another thread at the time of invocation.
+            // tryLock method does not honour the fairness setting
             if (bufferLock.tryLock()) {
                 try {
                     if (buffer.isEmpty()) {

@@ -2,14 +2,16 @@ package challenge;
 
 
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 
 public class Main {
  
     public static void main(String[] args) {
-        Tutor tutor = new Tutor();
-        Student student = new Student(tutor);
+        Semaphore sem = new Semaphore(1);
+        Tutor tutor = new Tutor(sem);
+        Student student = new Student(sem, tutor);
         tutor.setStudent(student);
  
         Thread tutorThread = new Thread(new Runnable() {
@@ -33,10 +35,15 @@ public class Main {
  
 class Tutor {
     private Student student;
- 
+    private Semaphore sem;
+
     boolean tutorArrived = false;
     public boolean hasTutorArrived() {
         return tutorArrived;
+    }
+
+    public Tutor(Semaphore sem) {
+        this.sem = sem;
     }
 
     public void setStudent(Student student) {
@@ -45,15 +52,13 @@ class Tutor {
  
     public void studyTime() {
         System.out.println("Tutor has arrived");
-        tutorArrived = true;
         try {
-            // wait for student to arrive and hand in assignment
-            Thread.sleep(300);
+            sem.acquire();
         }
-        catch (InterruptedException e) {
- 
-        }
-        while (!student.isAssignmentHandedIn()) {
+        catch (InterruptedException e) {}
+
+        // wait for student to arrive and hand in assignment
+        while (sem.availablePermits() != 1) {
             continue;
         }
         student.startStudy();
@@ -69,15 +74,11 @@ class Tutor {
 class Student {
  
     private Tutor tutor;
-
-    boolean handedAssignment = false;
-
-    public boolean isAssignmentHandedIn() {
-        return handedAssignment;
-    }
+    private Semaphore sem;
  
-    Student(Tutor tutor) {
+    Student(Semaphore sem, Tutor tutor) {
         this.tutor = tutor;
+        this.sem = sem;
     }
  
     public void startStudy() {
@@ -86,12 +87,12 @@ class Student {
     }
  
     public void handInAssignment() {
-        while(!tutor.hasTutorArrived()) {
+        while(sem.availablePermits() != 0) {
             continue;
         }
         tutor.getProgressReport();
         System.out.println("Student handed in assignment");
-        handedAssignment = true;
+        sem.release();
     }
 }
 
